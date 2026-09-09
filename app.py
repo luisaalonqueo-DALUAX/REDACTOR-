@@ -69,27 +69,54 @@ with col_preview:
     """, unsafe_allow_html=True)
 
     # Generación del PDF para descarga
+   # Generador de PDF compatible con caracteres en español
     def generate_pdf():
         pdf = FPDF()
         pdf.add_page()
+        pdf.set_auto_page_break(auto=True, margin=15)
+        
+        # Función auxiliar para limpiar caracteres no soportados por Helvetica
+        def clean_text(txt):
+            if not txt:
+                return ""
+            # Reemplaza la raya larga por un guión común y limpia tildes para FPDF básico
+            txt = txt.replace("—", "-").replace("º", "°")
+            return txt.encode('latin-1', 'replace').decode('latin-1')
+        
         pdf.set_font("Helvetica", "B", 14)
-        pdf.cell(0, 8, "GOBIERNO DEL CHUBUT", ln=True, align="C")
+        pdf.cell(0, 8, clean_text("GOBIERNO DEL CHUBUT"), ln=True, align="C")
+        
         pdf.set_font("Helvetica", "", 9)
-        pdf.cell(0, 5, "Ministerio de Producción — DPA-SsFyCP-MP", ln=True, align="C")
+        pdf.cell(0, 5, clean_text("Ministerio de Producción - DPA-SsFyCP-MP"), ln=True, align="C")
         pdf.line(10, 25, 200, 25)
         pdf.ln(10)
+        
+        # Fecha
         pdf.set_font("Helvetica", "", 11)
-        pdf.cell(0, 8, fecha_custom, ln=True, align="R")
+        pdf.cell(0, 8, clean_text(fecha_custom), ln=True, align="R")
         pdf.ln(5)
+        
+        # Encabezado Tipo Documento
         pdf.set_font("Helvetica", "B", 11)
-        pdf.cell(0, 8, header_code, ln=True, align="L")
-        pdf.cell(0, 8, f"ASUNTO: {asunto}", ln=True, align="L")
+        pdf.cell(0, 8, clean_text(header_code), ln=True, align="L")
+        pdf.cell(0, 8, clean_text(f"ASUNTO: {asunto}"), ln=True, align="L")
         pdf.ln(5)
+        
+        # Destinatario
+        if destinatario:
+            pdf.set_font("Helvetica", "I", 10)
+            pdf.multi_cell(0, 6, clean_text(destinatario))
+            pdf.ln(5)
+            
+        # Cuerpo del texto
         pdf.set_font("Helvetica", "", 11)
-        pdf.multi_cell(0, 7, contenido, align="J")
+        pdf.multi_cell(0, 7, clean_text(contenido_instruccion), align="J")
+        
+        # Pie L.I.A.
         pdf.set_y(-30)
         pdf.set_font("Helvetica", "B", 11)
-        pdf.cell(0, 10, "L.I.A.", align="R", ln=True)
+        pdf.cell(0, 10, clean_text("L.I.A."), align="R", ln=True)
+        
         return pdf.output()
 
     st.download_button(

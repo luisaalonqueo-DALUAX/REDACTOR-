@@ -1,209 +1,83 @@
-import sys
-import subprocess
-
-# Asegurar instalación de fpdf2 en tiempo de ejecución
-try:
-    from fpdf import FPDF
-except ImportError:
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "fpdf2"])
-    from fpdf import FPDF
-
 import streamlit as st
 from datetime import datetime
 
-# Configuración de página
+# Configuración de la página
 st.set_page_config(
-    page_title="Sistema de Documentos Oficiales - Chubut",
-    page_icon="🏛️",
-    layout="wide"
+    page_title="Redactor de Documentos Oficiales - Provincia del Chubut",
+    page_icon="📝",
+    layout="centered"
 )
 
-# Estilos personalizados en CSS
-st.markdown("""
-<style>
-    .main-header {
-        font-family: 'Verdana', sans-serif;
-        color: #003366;
-        text-align: center;
-        margin-bottom: 20px;
-    }
-    .status-badge {
-        background-color: #fff3cd;
-        color: #856404;
-        padding: 10px;
-        border-radius: 5px;
-        border-left: 5px solid #ffeeba;
-        font-family: 'Verdana', sans-serif;
-        font-size: 0.9em;
-        margin-bottom: 20px;
-    }
-    .doc-preview-card {
-        background-color: #ffffff;
-        border: 1px solid #e0e0e0;
-        padding: 40px;
-        border-radius: 4px;
-        font-family: 'Verdana', sans-serif;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-        min-height: 500px;
-        position: relative;
-    }
-    .doc-header-code {
-        font-weight: bold;
-        font-size: 1.1em;
-        color: #2c3e50;
-        margin-top: 15px;
-        margin-bottom: 15px;
-    }
-    .doc-date {
-        text-align: right;
-        font-size: 1.0em;
-        margin-bottom: 20px;
-    }
-    .doc-body {
-        text-align: justify;
-        font-size: 1.0em;
-        line-height: 1.6;
-        margin-top: 25px;
-        margin-bottom: 80px;
-        white-space: pre-wrap;
-    }
-    .doc-footer {
-        position: absolute;
-        bottom: 20px;
-        right: 40px;
-        font-weight: bold;
-        font-size: 1.0em;
-        color: #444;
-    }
-</style>
-""", unsafe_allow_html=True)
+st.title("📝 Redactor de Documentos Oficiales")
+st.subheader("Gobierno de la Provincia del Chubut - Ministerio de Producción")
 
-st.title("🏛️ Generador de Documentación Administrativa")
-st.caption("Organismo: DPA-SsFyCP-MP | Gobierno del Chubut")
-
-st.markdown("""
-<div class="status-badge">
-    🟡 <b>Formato configurado internamente — pendiente de validación oficial</b><br>
-    <i>Tipografía oficial: Verdana (10–12pt) | Redacción basada en normativa vigente.</i>
-</div>
-""", unsafe_allow_html=True)
-
-# Layout de dos columnas
-col_input, col_preview = st.columns([1, 1])
-
-with col_input:
-    st.subheader("📋 Datos del Trámite")
-    
-    doc_type = st.selectbox(
-        "Tipo de Documento",
-        ["Nota", "Memorándum", "Pase", "Informe", "Providencia"]
+# Formulario principal
+with st.form("form_documento"):
+    tipo_doc = st.selectbox(
+        "Tipo de documento:",
+        ["Nota Oficial", "Memorándum", "Pase Administrativo"]
     )
     
-    doc_num = st.text_input("Número Correlativo", value="001/2026")
-    
-    # Fecha actual por defecto
-    meses = ["enero", "febrero", "marzo", "abril", "mayo", "junio", 
-             "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
-    now = datetime.now()
-    default_date_str = f"Rw, {now.day} de {meses[now.month-1]} de {now.year}."
-    
-    fecha_custom = st.text_input("Lugar y Fecha", value=default_date_str)
-    
-    destinatario = st.text_area(
-        "Destinatario / Organismo (opcional para Notas/Memos)",
-        value="Al Sr. Director Provincial de Administración\nS / D",
-        height=80
-    )
-    
-    asunto = st.text_input("Asunto / Referencia", value="Solicitud de informe técnico")
-    
-    contenido_instruccion = st.text_area(
-        "Contenido / Instrucciones para la Redacción",
-        value="Por medio de la presente, me dirijo a usted a fin de solicitar tenga bien disponer la elaboración del informe técnico relativo a las actuaciones del expediente en trámite.",
-        height=200
-    )
-    
-    st.button("🔄 Actualizar Vista Previa", use_container_width=True)
+    col1, col2 = st.columns(2)
+    with col1:
+        num_doc = st.text_input("Número de Documento:", value="____")
+        anio_doc = st.text_input("Año:", value="2026")
+    with col2:
+        lugar_fecha = st.text_input("Lugar y Fecha:", value=f"Rawson, {datetime.now().strftime('%d de %B de %Y')}")
+        iniciales = st.text_input("Iniciales al pie (Izquierda):", value="L.I.A.")
 
-# Lógica de Vista Previa y Exportación
-with col_preview:
-    st.subheader("📄 Vista Previa del Documento")
+    st.markdown("---")
     
-    header_code = f"{doc_type.upper()} N.º {doc_num} — DPA-SsFyCP-MP"
-    
-    # Render preview
-    st.markdown(f"""
-    <div class="doc-preview-card">
-        <div style="text-align: center; border-bottom: 2px solid #003366; padding-bottom: 10px; margin-bottom: 20px;">
-            <h3 style="margin:0; color:#003366; font-family:'Verdana';">GOBIERNO DEL CHUBUT</h3>
-            <small style="color:#666;">Ministerio de Producción — DPA-SsFyCP-MP</small>
-        </div>
-        <div class="doc-date">{fecha_custom}</div>
-        <div class="doc-header-code">{header_code}</div>
-        <div style="font-weight:bold; margin-bottom: 15px;">ASUNTO: {asunto}</div>
-        {'<div style="margin-bottom:15px; font-style:italic;">' + destinatario.replace('\n', '<br>') + '</div>' if destinatario else ''}
-        <div class="doc-body">{contenido_instruccion}</div>
-        <div class="doc-footer">L.I.A.</div>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    st.markdown("<br>", unsafe_allow_html=True)
-    
-    # Generador de PDF compatible con caracteres en español
-    def generate_pdf():
-        pdf = FPDF()
-        pdf.add_page()
-        pdf.set_auto_page_break(auto=True, margin=15)
-        
-        # Limpieza de textos para evitar encoding error en FPDF
-        def clean_text(txt):
-            if not txt:
-                return ""
-            txt = txt.replace("—", "-").replace("º", "°")
-            return txt.encode('latin-1', 'replace').decode('latin-1')
-        
-        pdf.set_font("Helvetica", "B", 14)
-        pdf.cell(0, 8, clean_text("GOBIERNO DEL CHUBUT"), ln=True, align="C")
-        
-        pdf.set_font("Helvetica", "", 9)
-        pdf.cell(0, 5, clean_text("Ministerio de Producción - DPA-SsFyCP-MP"), ln=True, align="C")
-        pdf.line(10, 25, 200, 25)
-        pdf.ln(10)
-        
-        # Fecha
-        pdf.set_font("Helvetica", "", 11)
-        pdf.cell(0, 8, clean_text(fecha_custom), ln=True, align="R")
-        pdf.ln(5)
-        
-        # Encabezado
-        pdf.set_font("Helvetica", "B", 11)
-        pdf.cell(0, 8, clean_text(header_code), ln=True, align="L")
-        pdf.cell(0, 8, clean_text(f"ASUNTO: {asunto}"), ln=True, align="L")
-        pdf.ln(5)
-        
-        # Destinatario
-        if destinatario:
-            pdf.set_font("Helvetica", "I", 10)
-            pdf.multi_cell(0, 6, clean_text(destinatario))
-            pdf.ln(5)
-            
-        # Cuerpo del texto
-        pdf.set_font("Helvetica", "", 11)
-        pdf.multi_cell(0, 7, clean_text(contenido_instruccion), align="J")
-        
-        # Pie L.I.A.
-        pdf.set_y(-30)
-        pdf.set_font("Helvetica", "B", 11)
-        pdf.cell(0, 10, clean_text("L.I.A."), align="R", ln=True)
-        
-        return pdf.output()
+    if tipo_doc == "Memorándum":
+        de_persona = st.text_input("DE:", value="Departamento de Administración de Personal")
+        para_persona = st.text_input("PARA:", value="División Sueldos")
+        asunto_ref = st.text_input("Ref. / Expte.:")
+        cuerpo = st.text_area("Cuerpo del Memorándum:", height=180)
+    elif tipo_doc == "Pase Administrativo":
+        destinatario = st.text_input("Destinatario / Repartición:", value="Mesa General de Entradas y Salidas - Ministerio de Producción")
+        asunto_ref = st.text_input("Ref. / Expte. a acumular:", value="Expediente N° ...")
+        cuerpo = st.text_area("Cuerpo / Indicaciones del Pase:", height=180)
+    else: # Nota Oficial
+        destinatario = st.text_area("Destinatario (Nombre, Cargo y Despacho):", value="Ministerio de Producción\nDirección General de Asuntos Legales\nAbg. Norma Navarro\nSU DESPACHO")
+        asunto_ref = st.text_input("Ref. / Expte.:")
+        cuerpo = st.text_area("Cuerpo de la Nota:", height=180)
 
-    pdf_bytes = generate_pdf()
+    st.markdown("---")
+    firmante = st.text_input("Firmante:", value="Luisa Iris Alonqueo")
+    cargo_firmante = st.text_input("Cargo:", value="Secretaria Administrativa")
+
+    submitted = st.form_submit_button("🚀 Generar Documento Formateado")
+
+# Renderizado del documento generado
+if submitted:
+    st.markdown("---")
+    st.subheader("📄 Vista Previa del Documento Generado")
     
+    encabezado = """**GOBIERNO DE LA PROVINCIA DEL CHUBUT**  
+**MINISTERIO DE PRODUCCIÓN**  
+Subsecretaría de Financiamiento y Comercio para la Producción  
+Departamento de Administración de Personal  
+"""
+    st.markdown(f"<div style='text-align: right;'>{lugar_fecha}</div>", unsafe_allow_html=True)
+    st.markdown(encabezado)
+    st.markdown("---")
+    
+    if tipo_doc == "Memorándum":
+        pie_formateado = f"Memo N° {num_doc}/{anio_doc} DAP-SsFyCP ({iniciales})"
+        doc_texto = f"{encabezado}\n\n{lugar_fecha}\n\n**MEMORÁNDUM**\n\n**DE:** {de_persona}\n**PARA:** {para_persona}\n**REF.:** {asunto_ref}\n\n{cuerpo}\n\nSin otro particular, saludo a usted muy atentamente.\n\n({iniciales}) {pie_formateado}"
+    elif tipo_doc == "Pase Administrativo":
+        pie_formateado = f"Pase N° {num_doc}/{anio_doc} DAP-SsFyCP- Ministerio de Producción ({iniciales})"
+        doc_texto = f"{encabezado}\n\n{lugar_fecha}\n\n**A:** {destinatario}\n**REF.:** {asunto_ref}\n\n{cuerpo}\n\n({iniciales}) {pie_formateado}"
+    else:
+        pie_formateado = f"Nota N° {num_doc}/{anio_doc} DAP-SsFyCP- Ministerio de Producción ({iniciales})"
+        doc_texto = f"{encabezado}\n\n{lugar_fecha}\n\n{destinatario}\n\n**Ref.:** {asunto_ref}\n\nDe mi mayor consideración:\n\n{cuerpo}\n\nSin otro particular, saludo a Ud. atentamente.\n\n({iniciales}) {pie_formateado}"
+
+    st.markdown(doc_texto)
+    
+    st.markdown("---")
     st.download_button(
-        label="📥 Descargar Documento en PDF",
-        data=bytes(pdf_bytes),
-        file_name=f"{doc_type}_{doc_num.replace('/', '-')}.pdf",
-        mime="application/pdf",
-        use_container_width=True
+        label="📥 Descargar Documento (.txt)",
+        data=doc_texto,
+        file_name=f"{tipo_doc.lower().replace(' ', '_')}_{num_doc}_{anio_doc}.txt",
+        mime="text/plain"
     )

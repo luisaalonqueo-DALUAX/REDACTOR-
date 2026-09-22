@@ -75,28 +75,32 @@ st.subheader("Gobierno de la Provincia del Chubut - Ministerio de Producción")
 pestana1, pestana2 = st.tabs(["✍️ Redactar Documento", "🔍 Índice y Histórico"])
 
 # ---------------------------------------------------------
-# PESTAÑA 1: REDACCIÓN Y RECOMENDACIÓN
+# PESTAÑA 1: REDACCIÓN Y VERIFICACIÓN REGLAMENTARIA
 # ---------------------------------------------------------
 with pestana1:
     anio_actual = str(datetime.now().year)
     
-    st.markdown("### 1. Selección y Sugerencia de Documento")
+    st.markdown("### 1. Verificación de Destino y Regla Administrativa")
     
-    # Campo para detectar qué tipo de documento corresponde según el destinatario
-    destinatario_input = st.text_input("¿A quién va dirigido? (Destinatario / Sector):", value="")
+    destinatario_input = st.text_input("Ingresa Destinatario o Área de Destino:", value="")
     
-    # Sugerencia automática
+    # Evaluación reglamentaria del tipo de documento
     sugerencia = "Nota Oficial"
-    if "sueldos" in destinatario_input.lower() or "personal" in destinatario_input.lower() or "división" in destinatario_input.lower():
+    explicacion = "Las comunicaciones dirigidas a Asuntos Legales u otros Ministerios/Direcciones externas deben canalizarse como Nota Oficial."
+    
+    dest_lower = destinatario_input.lower()
+    if any(p in dest_lower for p in ["sueldos", "división", "liquidacion", "costos"]):
         sugerencia = "Memorándum"
-    elif "mesa" in destinatario_input.lower() or "entradas" in destinatario_input.lower() or "acumular" in destinatario_input.lower():
+        explicacion = "Las comunicaciones internas dentro de la misma Subsecretaría (ej. División Sueldos) se tramitan como Memorándum."
+    elif any(p in dest_lower for p in ["mesa", "entradas", "acumular", "salidas"]):
         sugerencia = "Pase Administrativo"
+        explicacion = "Los giros de actuaciones a Mesa de Entradas o pedidos de acumulación de expedientes corresponden a un Pase Administrativo."
     
     if destinatario_input:
-        st.info(f"💡 **Sugerencia:** Según el destinatario ingresado, corresponde redactar un/a **{sugerencia}**.")
+        st.info(f"💡 **Verificación Normativa:** Según el destino ingresado, corresponde un/a **{sugerencia}**.\n\n_{explicacion}_")
 
     tipo_doc = st.selectbox(
-        "Confirmar Tipo de Documento:",
+        "Tipo de Documento a emitir:",
         ["Nota Oficial", "Memorándum", "Pase Administrativo"],
         index=["Nota Oficial", "Memorándum", "Pase Administrativo"].index(sugerencia)
     )
@@ -105,7 +109,7 @@ with pestana1:
     ultimo_num = obtener_ultimo_numero(tipo_doc, anio_actual)
     siguiente_num = ultimo_num + 1
 
-    st.warning(f"📌 Último número emitido de **{tipo_doc}** en {anio_actual}: **{ultimo_num}**. Próximo número asignado: **{siguiente_num}**.")
+    st.warning(f"📌 Último número emitido para **{tipo_doc}** en {anio_actual}: **{ultimo_num}**. Próximo número disponible: **{siguiente_num}**.")
 
     with st.form("form_redaccion"):
         col1, col2 = st.columns(2)
@@ -113,34 +117,34 @@ with pestana1:
             num_doc = st.number_input("Número Correlativo:", value=siguiente_num, step=1)
             anio_doc = st.text_input("Año:", value=anio_actual)
         with col2:
-            lugar_fecha = st.text_input("Lugar y Fecha:", value=f"Rawson, {datetime.now().strftime('%d de %B de %Y')}")
-            iniciales = st.text_input("Iniciales al pie:", value="L.I.A.")
+            lugar_fecha = st.text_input("Lugar y Fecha (Derecha):", value=f"Rawson, {datetime.now().strftime('%d de %B de %Y')}")
+            iniciales = st.text_input("Iniciales al pie (Izquierda):", value="L.I.A.")
 
         st.markdown("---")
         
         if tipo_doc == "Memorándum":
             de_persona = st.text_input("DE:", value="Departamento de Administración de Personal")
             para_persona = st.text_input("PARA:", value=destinatario_input if destinatario_input else "División Sueldos")
-            asunto_ref = st.text_input("Ref. / Expte.:")
+            asunto_ref = st.text_input("Ref. / Expte. (Derecha):")
             cuerpo = st.text_area("Cuerpo del Memorándum:", height=180)
-            dest_final = f"DE: {de_persona} | PARA: {para_persona}"
+            dest_final = f"DE: {de_persona}\nPARA: {para_persona}"
         elif tipo_doc == "Pase Administrativo":
             dest_final = destinatario_input if destinatario_input else "Mesa General de Entradas y Salidas - Ministerio de Producción"
             st.text_input("Destinatario / Repartición:", value=dest_final)
-            asunto_ref = st.text_input("Ref. / Expte. a acumular:", value="Expediente N° ...")
+            asunto_ref = st.text_input("Ref. / Expte. a acumular (Derecha):", value="Expediente N° ...")
             cuerpo = st.text_area("Cuerpo / Indicaciones del Pase:", height=180)
         else: # Nota Oficial
             dest_final = destinatario_input if destinatario_input else "Ministerio de Producción\nDirección General de Asuntos Legales\nAbg. Norma Navarro\nSU DESPACHO:"
             st.text_area("Destinatario completo:", value=dest_final)
-            asunto_ref = st.text_input("Ref. / Expte.:")
+            asunto_ref = st.text_input("Ref. / Expte. (Derecha):")
             cuerpo = st.text_area("Cuerpo de la Nota:", height=180)
 
-        submitted = st.form_submit_button("🚀 Generar y Guardar en Histórico")
+        submitted = st.form_submit_button("🚀 Generar Documento y Registrar Correlatividad")
 
     if submitted:
-        # Guardar en base de datos local
+        # Guardar correlativo en base de datos
         guardar_documento(tipo_doc, num_doc, anio_doc, lugar_fecha, dest_final, asunto_ref, cuerpo, iniciales)
-        st.success(f"✅ Documento registrado correctamente. **{tipo_doc} N° {num_doc}/{anio_doc}** guardado en el índice.")
+        st.success(f"✅ Documento generado y registrado en el índice general: **{tipo_doc} N° {num_doc}/{anio_doc}**.")
         
         st.markdown("---")
         st.subheader("📄 Vista Previa del Documento")
@@ -148,6 +152,7 @@ with pestana1:
         leyenda_oficial = '"Año de la Innovación y Modernización del Estado de la Provincia del Chubut"'
         contacto_pie = "Mariano Moreno y Luis Costa | Rawson | Chubut (Teléfono 280-4485125/126)"
         
+        # Header oficial con membrete a la izquierda y leyenda en el centro
         encabezado_html = f"""
         <div style="border-bottom: 2px solid #1a365d; padding-bottom: 10px; margin-bottom: 20px;">
             <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -197,11 +202,11 @@ with pestana1:
         )
 
 # ---------------------------------------------------------
-# PESTAÑA 2: ÍNDICE BÚSQUEDA Y REGISTRO DE DOCUMENTOS
+# PESTAÑA 2: ÍNDICE Y BÚSQUEDA HISTÓRICA
 # ---------------------------------------------------------
 with pestana2:
-    st.markdown("### 🔍 Índice de Documentos Emitidos")
-    busqueda = st.text_input("Buscar por expediente, asunto, destinatario o tipo:", value="")
+    st.markdown("### 🔍 Buscador e Índice de Documentos Registrados")
+    busqueda = st.text_input("Buscar por número, expediente, asunto o destinatario:", value="")
     
     resultados = buscar_documentos(busqueda)
     
@@ -213,4 +218,4 @@ with pestana2:
                 st.write(f"**Destinatario:** {d_doc}")
                 st.write(f"**Referencia:** {as_doc}")
     else:
-        st.info("No se encontraron documentos registrados.")
+        st.info("No hay documentos registrados que coincidan con la búsqueda.")

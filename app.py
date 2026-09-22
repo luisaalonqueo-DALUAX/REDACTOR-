@@ -23,23 +23,23 @@ with st.form("form_documento"):
         num_doc = st.text_input("Número de Documento:", value="____")
         anio_doc = st.text_input("Año:", value="2026")
     with col2:
-        lugar_fecha = st.text_input("Lugar y Fecha (A la izquierda):", value=f"Rawson, {datetime.now().strftime('%d de %B de %Y')}")
-        iniciales = st.text_input("Iniciales al pie (A la izquierda):", value="L.I.A.")
+        lugar_fecha = st.text_input("Lugar y Fecha (Izquierda):", value=f"Rawson, {datetime.now().strftime('%d de %B de %Y')}")
+        iniciales = st.text_input("Iniciales al pie (Izquierda):", value="L.I.A.")
 
     st.markdown("---")
     
     if tipo_doc == "Memorándum":
         de_persona = st.text_input("DE:", value="Departamento de Administración de Personal")
         para_persona = st.text_input("PARA:", value="División Sueldos")
-        asunto_ref = st.text_input("Ref. / Expte. (A la izquierda):")
+        asunto_ref = st.text_input("Ref. / Expte. (Izquierda):")
         cuerpo = st.text_area("Cuerpo del Memorándum:", height=180)
     elif tipo_doc == "Pase Administrativo":
         destinatario = st.text_input("Destinatario / Repartición:", value="Mesa General de Entradas y Salidas - Ministerio de Producción")
-        asunto_ref = st.text_input("Ref. / Expte. a acumular (A la izquierda):", value="Expediente N° ...")
+        asunto_ref = st.text_input("Ref. / Expte. a acumular (Izquierda):", value="Expediente N° ...")
         cuerpo = st.text_area("Cuerpo / Indicaciones del Pase:", height=180)
     else: # Nota Oficial
         destinatario = st.text_area("Destinatario (Nombre, Cargo y Despacho):", value="Ministerio de Producción\nDirección General de Asuntos Legales\nAbg. Norma Navarro\nSU DESPACHO:")
-        asunto_ref = st.text_input("Ref. / Expte. (A la izquierda):")
+        asunto_ref = st.text_input("Ref. / Expte. (Izquierda):")
         cuerpo = st.text_area("Cuerpo de la Nota:", height=180)
 
     st.markdown("---")
@@ -53,23 +53,25 @@ if submitted:
     leyenda_oficial = '"Año de la Innovación y Modernización del Estado de la Provincia del Chubut"'
     contacto_pie = "Mariano Moreno y Luis Costa | Rawson | Chubut (Teléfono 280-4485125/126)"
     
-    # Encabezado: Membrete a la izquierda y leyenda en el centro
+    # Encabezado con Membrete Oficial + Leyenda Central
     encabezado_html = f"""
-    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ccc; padding-bottom: 10px; margin-bottom: 15px;">
-        <div style="text-align: left;">
-            <h4 style="margin:0; font-weight: bold;">GOBIERNO DE LA PROVINCIA DEL CHUBUT</h4>
-            <h5 style="margin:0;">MINISTERIO DE PRODUCCIÓN</h5>
-            <p style="margin:0; font-size: 12px;">Subsecretaría de Financiamiento y Comercio para la Producción</p>
-            <p style="margin:0; font-size: 12px; font-weight: bold;">Departamento de Administración de Personal</p>
-        </div>
-        <div style="text-align: center; flex-grow: 1; margin-left: 20px;">
-            <p style="font-style: italic; font-size: 13px; font-weight: bold; margin: 0;">{leyenda_oficial}</p>
+    <div style="border-bottom: 2px solid #1a365d; padding-bottom: 10px; margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="text-align: left;">
+                <p style="margin:0; font-size: 11px; font-weight: bold; color: #1a365d;">GOBIERNO DE LA PROVINCIA DEL CHUBUT</p>
+                <p style="margin:0; font-size: 11px; font-weight: bold; color: #1a365d;">MINISTERIO DE PRODUCCIÓN</p>
+                <p style="margin:0; font-size: 10px; color: #4a5568;">Subsecretaría de Financiamiento y Comercio para la Producción</p>
+                <p style="margin:0; font-size: 10px; font-weight: bold; color: #2d3748;">Departamento de Administración de Personal</p>
+            </div>
+            <div style="text-align: center; flex-grow: 1; padding: 0 15px;">
+                <p style="font-style: italic; font-size: 12px; font-weight: bold; color: #2b6cb0; margin: 0;">{leyenda_oficial}</p>
+            </div>
         </div>
     </div>
     """
     st.markdown(encabezado_html, unsafe_allow_html=True)
     
-    # Texto con alineación a la izquierda
+    # Formato con Alineaciones a la Izquierda exactas al documento
     if tipo_doc == "Memorándum":
         pie_formateado = f"Memo N° {num_doc}/{anio_doc} DAP-SsFyCP ({iniciales})"
         doc_texto = f"{lugar_fecha}\n\n**MEMORÁNDUM**\n\n**DE:** {de_persona}\n**PARA:** {para_persona}\n\n**Ref.:** {asunto_ref}\n\n{cuerpo}\n\nSin otro particular, saludo a usted muy atentamente.\n\n({iniciales}) {pie_formateado}"

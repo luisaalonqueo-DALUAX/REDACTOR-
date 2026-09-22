@@ -45,28 +45,31 @@ with st.form("form_documento"):
     st.markdown("---")
     submitted = st.form_submit_button("🚀 Generar Documento Formateado")
 
-# Renderizado e impresión del documento generado
+# Renderizado del documento generado
 if submitted:
     st.markdown("---")
     st.subheader("📄 Vista Previa del Documento Generado")
     
-    # Membrete Oficial e Imagen / Leyenda Obligatoria
     leyenda_oficial = '"Año de la Innovación y Modernización del Estado de la Provincia del Chubut"'
     contacto_pie = "Mariano Moreno y Luis Costa | Rawson | Chubut (Teléfono 280-4485125/126)"
     
+    # Encabezado: Membrete a la izquierda y leyenda en el centro
     encabezado_html = f"""
-    <div style="text-align: center; margin-bottom: 20px;">
-        <h3 style="margin:0;">GOBIERNO DE LA PROVINCIA DEL CHUBUT</h3>
-        <h4 style="margin:0;">MINISTERIO DE PRODUCCIÓN</h4>
-        <p style="margin:0; font-size: 14px;">Subsecretaría de Financiamiento y Comercio para la Producción</p>
-        <p style="margin:0; font-size: 14px; font-weight: bold;">Departamento de Administración de Personal</p>
-        <p style="font-style: italic; font-size: 12px; margin-top: 8px;">{leyenda_oficial}</p>
+    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ccc; padding-bottom: 10px; margin-bottom: 15px;">
+        <div style="text-align: left;">
+            <h4 style="margin:0; font-weight: bold;">GOBIERNO DE LA PROVINCIA DEL CHUBUT</h4>
+            <h5 style="margin:0;">MINISTERIO DE PRODUCCIÓN</h5>
+            <p style="margin:0; font-size: 12px;">Subsecretaría de Financiamiento y Comercio para la Producción</p>
+            <p style="margin:0; font-size: 12px; font-weight: bold;">Departamento de Administración de Personal</p>
+        </div>
+        <div style="text-align: center; flex-grow: 1; margin-left: 20px;">
+            <p style="font-style: italic; font-size: 13px; font-weight: bold; margin: 0;">{leyenda_oficial}</p>
+        </div>
     </div>
     """
     st.markdown(encabezado_html, unsafe_allow_html=True)
-    st.markdown("---")
     
-    # Formato con Alineaciones a la Izquierda
+    # Texto con alineación a la izquierda
     if tipo_doc == "Memorándum":
         pie_formateado = f"Memo N° {num_doc}/{anio_doc} DAP-SsFyCP ({iniciales})"
         doc_texto = f"{lugar_fecha}\n\n**MEMORÁNDUM**\n\n**DE:** {de_persona}\n**PARA:** {para_persona}\n\n**Ref.:** {asunto_ref}\n\n{cuerpo}\n\nSin otro particular, saludo a usted muy atentamente.\n\n({iniciales}) {pie_formateado}"
@@ -78,7 +81,7 @@ if submitted:
         doc_texto = f"{lugar_fecha}\n\n{destinatario}\n\n**Ref.:** {asunto_ref}\n\nDe mi mayor consideración:\n\n{cuerpo}\n\nSin otro particular, saludo a Ud. atentamente.\n\n({iniciales}) {pie_formateado}"
 
     st.markdown(doc_texto)
-    st.markdown(f"<p style='font-size: 10px; color: gray; text-align: center;'>{contacto_pie}</p>", unsafe_allow_html=True)
+    st.markdown(f"<p style='font-size: 10px; color: gray; text-align: center; margin-top: 30px;'>{contacto_pie}</p>", unsafe_allow_html=True)
     
     st.markdown("---")
     st.download_button(

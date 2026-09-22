@@ -23,7 +23,7 @@ with st.form("form_documento"):
         num_doc = st.text_input("Número de Documento:", value="____")
         anio_doc = st.text_input("Año:", value="2026")
     with col2:
-        lugar_fecha = st.text_input("Lugar y Fecha (Izquierda):", value=f"Rawson, {datetime.now().strftime('%d de %B de %Y')}")
+        lugar_fecha = st.text_input("Lugar y Fecha (Derecha):", value=f"Rawson, {datetime.now().strftime('%d de %B de %Y')}")
         iniciales = st.text_input("Iniciales al pie (Izquierda):", value="L.I.A.")
 
     st.markdown("---")
@@ -31,15 +31,15 @@ with st.form("form_documento"):
     if tipo_doc == "Memorándum":
         de_persona = st.text_input("DE:", value="Departamento de Administración de Personal")
         para_persona = st.text_input("PARA:", value="División Sueldos")
-        asunto_ref = st.text_input("Ref. / Expte. (Izquierda):")
+        asunto_ref = st.text_input("Ref. / Expte. (Derecha):")
         cuerpo = st.text_area("Cuerpo del Memorándum:", height=180)
     elif tipo_doc == "Pase Administrativo":
         destinatario = st.text_input("Destinatario / Repartición:", value="Mesa General de Entradas y Salidas - Ministerio de Producción")
-        asunto_ref = st.text_input("Ref. / Expte. a acumular (Izquierda):", value="Expediente N° ...")
+        asunto_ref = st.text_input("Ref. / Expte. a acumular (Derecha):", value="Expediente N° ...")
         cuerpo = st.text_area("Cuerpo / Indicaciones del Pase:", height=180)
     else: # Nota Oficial
         destinatario = st.text_area("Destinatario (Nombre, Cargo y Despacho):", value="Ministerio de Producción\nDirección General de Asuntos Legales\nAbg. Norma Navarro\nSU DESPACHO:")
-        asunto_ref = st.text_input("Ref. / Expte. (Izquierda):")
+        asunto_ref = st.text_input("Ref. / Expte. (Derecha):")
         cuerpo = st.text_area("Cuerpo de la Nota:", height=180)
 
     st.markdown("---")
@@ -71,24 +71,40 @@ if submitted:
     """
     st.markdown(encabezado_html, unsafe_allow_html=True)
     
-    # Formato con Alineaciones a la Izquierda exactas al documento
+    # Fecha alineada a la derecha
+    st.markdown(f"<div style='text-align: right; font-weight: bold; margin-bottom: 15px;'>{lugar_fecha}</div>", unsafe_allow_html=True)
+    
+    # Referencia alineada a la derecha
+    ref_html = f"<div style='text-align: right; margin-bottom: 20px;'><strong>Ref.:</strong> {asunto_ref}</div>"
+    
     if tipo_doc == "Memorándum":
         pie_formateado = f"Memo N° {num_doc}/{anio_doc} DAP-SsFyCP ({iniciales})"
-        doc_texto = f"{lugar_fecha}\n\n**MEMORÁNDUM**\n\n**DE:** {de_persona}\n**PARA:** {para_persona}\n\n**Ref.:** {asunto_ref}\n\n{cuerpo}\n\nSin otro particular, saludo a usted muy atentamente.\n\n({iniciales}) {pie_formateado}"
+        st.markdown(f"**MEMORÁNDUM**\n\n**DE:** {de_persona}\n**PARA:** {para_persona}\n")
+        st.markdown(ref_html, unsafe_allow_html=True)
+        doc_cuerpo = f"{cuerpo}\n\nSin otro particular, saludo a usted muy atentamente.\n\n({iniciales}) {pie_formateado}"
+        st.markdown(doc_cuerpo)
     elif tipo_doc == "Pase Administrativo":
         pie_formateado = f"Pase N° {num_doc}/{anio_doc} DAP-SsFyCP- Ministerio de Producción ({iniciales})"
-        doc_texto = f"{lugar_fecha}\n\n**A:** {destinatario}\n\n**Ref.:** {asunto_ref}\n\n{cuerpo}\n\n({iniciales}) {pie_formateado}"
+        st.markdown(f"**A:** {destinatario}\n")
+        st.markdown(ref_html, unsafe_allow_html=True)
+        doc_cuerpo = f"{cuerpo}\n\n({iniciales}) {pie_formateado}"
+        st.markdown(doc_cuerpo)
     else:
         pie_formateado = f"Nota N° {num_doc}/{anio_doc} DAP-SsFyCP- Ministerio de Producción ({iniciales})"
-        doc_texto = f"{lugar_fecha}\n\n{destinatario}\n\n**Ref.:** {asunto_ref}\n\nDe mi mayor consideración:\n\n{cuerpo}\n\nSin otro particular, saludo a Ud. atentamente.\n\n({iniciales}) {pie_formateado}"
+        st.markdown(f"{destinatario}\n")
+        st.markdown(ref_html, unsafe_allow_html=True)
+        doc_cuerpo = f"De mi mayor consideración:\n\n{cuerpo}\n\nSin otro particular, saludo a Ud. atentamente.\n\n({iniciales}) {pie_formateado}"
+        st.markdown(doc_cuerpo)
 
-    st.markdown(doc_texto)
     st.markdown(f"<p style='font-size: 10px; color: gray; text-align: center; margin-top: 30px;'>{contacto_pie}</p>", unsafe_allow_html=True)
+    
+    # Texto completo listo para descargar
+    doc_texto_completo = f"{lugar_fecha}\nRef.: {asunto_ref}\n\n{doc_cuerpo}"
     
     st.markdown("---")
     st.download_button(
         label="📥 Descargar Documento (.txt)",
-        data=doc_texto,
+        data=doc_texto_completo,
         file_name=f"{tipo_doc.lower().replace(' ', '_')}_{num_doc}_{anio_doc}.txt",
         mime="text/plain"
     )

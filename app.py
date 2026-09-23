@@ -1,8 +1,9 @@
 import streamlit as st
 import sqlite3
+import re
 from datetime import datetime
 
-# Configuración de la página en modo ancho (wide)
+# Configuración de la página en modo ancho
 st.set_page_config(
     page_title="Redactor de Documentos Oficiales - Chubut",
     page_icon="📝",
@@ -10,7 +11,28 @@ st.set_page_config(
 )
 
 # ---------------------------------------------------------
-# 1. BASE DE DATOS LOCAL PARA CORRELATIVIDAD Y BÚSQUEDA
+# FUNCIONES AUXILIARES Y LIMPIEZA
+# ---------------------------------------------------------
+MESES_ESPANOL = {
+    1: "enero", 2: "febrero", 3: "marzo", 4: "abril",
+    5: "mayo", 6: "junio", 7: "julio", 8: "agosto",
+    9: "septiembre", 10: "octubre", 11: "noviembre", 12: "diciembre"
+}
+
+def obtener_fecha_actual_espanol():
+    hoy = datetime.now()
+    mes = MESES_ESPANOL[hoy.month]
+    return f"Rawson, {hoy.day} de {mes} de {hoy.year}.-"
+
+def limpiar_texto(texto):
+    if not texto:
+        return ""
+    # Quita espacios dobles o múltiples redundantes
+    texto_limpio = re.sub(r'[ \t]+', ' ', texto)
+    return texto_limpio.strip()
+
+# ---------------------------------------------------------
+# BASE DE DATOS LOCAL Y AUTOCOMPLETADO DE DESTINATARIOS
 # ---------------------------------------------------------
 def init_db():
     conn = sqlite3.connect("documentos.db")
@@ -28,8 +50,41 @@ def init_db():
             iniciales TEXT
         )
     ''')
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS destinatarios_frecuentes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nombre TEXT UNIQUE
+        )
+    ''')
+    
+    frecuentes = [
+        "Departamento Sueldos",
+        "Mesa General de Entradas y Salidas - Ministerio de Producción",
+        "Ministerio de Producción\nDirección General de Asuntos Legales\nAbg. Norma Navarro\nSU DESPACHO:",
+        "División Sueldos y Cargas Sociales",
+        "Subsecretaría de Financiamiento y Comercio para la Producción"
+    ]
+    for dest in frecuentes:
+        c.execute('INSERT OR IGNORE INTO destinatarios_frecuentes (nombre) VALUES (?)', (dest,))
+        
     conn.commit()
     conn.close()
+
+def obtener_destinatarios_frecuentes():
+    conn = sqlite3.connect("documentos.db")
+    c = conn.cursor()
+    c.execute('SELECT nombre FROM destinatarios_frecuentes ORDER BY nombre ASC')
+    filas = c.fetchall()
+    conn.close()
+    return [f[0] for f in filas]
+
+def guardar_destinatario_nuevo(nombre):
+    if nombre and len(nombre.strip()) > 3:
+        conn = sqlite3.connect("documentos.db")
+        c = conn.cursor()
+        c.execute('INSERT OR IGNORE INTO destinatarios_frecuentes (nombre) VALUES (?)', (limpiar_texto(nombre),))
+        conn.commit()
+        conn.close()
 
 def obtener_ultimo_numero(tipo, anio):
     conn = sqlite3.connect("documentos.db")
@@ -48,6 +103,7 @@ def guardar_documento(tipo, numero, anio, fecha, destinatario, asunto, cuerpo, i
     ''', (tipo, numero, anio, fecha, destinatario, asunto, cuerpo, iniciales))
     conn.commit()
     conn.close()
+    guardar_destinatario_nuevo(destinatario)
 
 def obtener_todos_documentos():
     conn = sqlite3.connect("documentos.db")
@@ -76,20 +132,16 @@ def buscar_documentos(query=""):
 init_db()
 
 # ---------------------------------------------------------
-# 2. ENCABEZADO Y PESTAÑAS
+# INTERFAZ PRINCIPAL
 # ---------------------------------------------------------
 st.title("📝 Redactor de Documentos Oficiales")
 st.subheader("Gobierno de la Provincia del Chubut - Ministerio de Producción")
 
 pestana1, pestana2 = st.tabs(["✍️ Redactar Documento", "🔍 Buscador e Índice General"])
 
-# ---------------------------------------------------------
-# PESTAÑA 1: REDACCIÓN COMPLETA + ÍNDICE LATERAL
-# ---------------------------------------------------------
 with pestana1:
     col_redaccion, col_indice = st.columns([2, 1])
     
-    # --- COLUMNA LATERAL: ÍNDICE DE CORRELATIVIDAD ---
     with col_indice:
         st.markdown("### 📋 Índice de Correlatividad")
         st.caption("Historial de números utilizados y motivo de emisión")
@@ -107,19 +159,27 @@ with pestana1:
         else:
             st.info("Aún no hay documentos registrados en el índice.")
 
-    # --- COLUMNA PRINCIPAL: REDACCIÓN ---
     with col_redaccion:
         anio_actual = str(datetime.now().year)
         
-        st.markdown("### 1. Verificación de Destino y Regla Administrativa")
-        destinatario_input = st.text_input("Ingresa Destinatario o Área de Destino:", value="")
+        st.markdown("### 1. Verificación de Destino (Autocompletado)")
         
-        # Lógica de sugerencia normativa
+        opciones_destinatarios = ["-- Escribir un nuevo destinatario --"] + obtener_destinatarios_frecuentes()
+        destinatario_seleccionado = st.selectbox("Seleccionar un destinatario habitual:", opciones_destinatarios)
+        
+        if destinatario_seleccionado == "-- Escribir un nuevo destinatario --":
+            destinatario_input = st.text_input("Ingresa Destinatario o Área de Destino:", value="")
+        else:
+            destinatario_input = destinatario_seleccionado
+
+        destinatario_input = limpiar_texto(destinatario_input)
+        
+        # Sugerencia y verificación normativa
         sugerencia = "Nota Oficial"
         explicacion = "Las comunicaciones dirigidas a Asuntos Legales u otros Ministerios/Direcciones externas deben canalizarse como Nota Oficial."
         
         dest_lower = destinatario_input.lower()
-        if any(p in dest_lower for p in ["sueldos", "división", "liquidacion", "costos", "departamento sueldos"]):
+        if any(p in dest_lower for p in ["sueldos", "división", "departamento sueldos", "liquidacion", "costos"]):
             sugerencia = "Memorándum"
             explicacion = "Las comunicaciones internas dirigidas a dependencias como el Departamento Sueldos se tramitan como Memorándum."
         elif any(p in dest_lower for p in ["mesa", "entradas", "acumular", "salidas"]):
@@ -146,7 +206,7 @@ with pestana1:
                 num_doc = st.number_input("Número Correlativo:", value=siguiente_num, step=1)
                 anio_doc = st.text_input("Año:", value=anio_actual)
             with c2:
-                lugar_fecha = st.text_input("Lugar y Fecha (A la derecha):", value=f"Rawson, {datetime.now().strftime('%d de %B de %Y')}")
+                lugar_fecha = st.text_input("Lugar y Fecha (A la derecha):", value=obtener_fecha_actual_espanol())
                 iniciales = st.text_input("Iniciales al pie:", value="L.I.A.")
 
             st.markdown("---")
@@ -156,6 +216,9 @@ with pestana1:
                 para_persona = st.text_input("Para Información:", value=destinatario_input if destinatario_input else "Departamento Sueldos")
                 asunto_ref = st.text_input("Ref. / Expte.:", value="Expte: N° 1729/2026-MP- Reclamo Adicional...")
                 cuerpo = st.text_area("Cuerpo del Memorándum:", height=180)
+                
+                de_persona = limpiar_texto(de_persona)
+                para_persona = limpiar_texto(para_persona)
                 dest_final = f"Producido por: {de_persona}\nPara Información: {para_persona}"
             elif tipo_doc == "Pase Administrativo":
                 dest_final = destinatario_input if destinatario_input else "Mesa General de Entradas y Salidas\nMinisterio de Producción\nSU DESPACHO"
@@ -168,6 +231,9 @@ with pestana1:
                 asunto_ref = st.text_input("Ref. / Expte.:")
                 cuerpo = st.text_area("Cuerpo de la Nota:", height=180)
 
+            asunto_ref = limpiar_texto(asunto_ref)
+            cuerpo = limpiar_texto(cuerpo)
+            
             submitted = st.form_submit_button("🚀 Generar Documento y Guardar en el Índice")
 
         if submitted:
@@ -175,7 +241,6 @@ with pestana1:
             st.success(f"✅ Registrado en el índice general: **{tipo_doc} N° {num_doc}/{anio_doc}**.")
             st.rerun()
 
-        # ESTILOS INSTITUCIONALES Y VISTA PREVIA
         leyenda_oficial = "“Año de la Innovación y Modernización del Estado de la Provincia del Chubut”"
         contacto_pie = "Mariano Moreno y Luis Costa | Rawson | Chubut (Teléfono 280-4485125/126)"
         
@@ -260,9 +325,6 @@ with pestana1:
                 </button>
             """, unsafe_allow_html=True)
 
-# ---------------------------------------------------------
-# PESTAÑA 2: BUSCADOR GENERAL DE DOCUMENTOS
-# ---------------------------------------------------------
 with pestana2:
     st.markdown("### 🔍 Buscador General de Documentos")
     busqueda = st.text_input("Buscar por expediente, motivo, asunto, destinatario o tipo:", value="")

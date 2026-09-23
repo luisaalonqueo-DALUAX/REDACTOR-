@@ -3,16 +3,10 @@ import sqlite3
 import re
 import io
 from datetime import datetime
-
-# Intentar cargar la librería para Word
-try:
-    import docx
-    from docx import Document
-    from docx.shared import Pt, Inches, RGBColor
-    from docx.enum.text import WD_ALIGN_PARAGRAPH
-    DOCX_DISPONIBLE = True
-except ImportError:
-    DOCX_DISPONIBLE = False
+import docx
+from docx import Document
+from docx.shared import Pt, Inches, RGBColor
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 st.set_page_config(
     page_title="Redactor de Documentos Oficiales - Chubut",
@@ -41,7 +35,7 @@ def limpiar_texto(texto):
     return texto_limpio.strip()
 
 # ---------------------------------------------------------
-# GENERACIÓN DE ARCHIVO WORD (.DOCX) EDITABLE
+# GENERACIÓN DE ARCHIVO WORD (.DOCX) CON ESTRUCTURA OFICIAL FIJA
 # ---------------------------------------------------------
 def generar_documento_word(tipo_doc, lugar_fecha, dest_final, asunto_ref, cuerpo, pie_formateado, es_duplicado):
     doc = Document()
@@ -52,9 +46,10 @@ def generar_documento_word(tipo_doc, lugar_fecha, dest_final, asunto_ref, cuerpo
         section.left_margin = Inches(1)
         section.right_margin = Inches(1)
         
-    def agregar_bloque(doc_obj):
+    def construir_bloque_oficial(doc_obj):
         p_leyenda = doc_obj.add_paragraph()
         p_leyenda.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        p_leyenda.paragraph_format.space_after = Pt(10)
         run_ley = p_leyenda.add_run('“Año de la Innovación y Modernización del Estado de la Provincia del Chubut”')
         run_ley.italic = True
         run_ley.font.name = 'Verdana'
@@ -64,10 +59,12 @@ def generar_documento_word(tipo_doc, lugar_fecha, dest_final, asunto_ref, cuerpo
         
         p_enc = doc_obj.add_paragraph()
         p_enc.alignment = WD_ALIGN_PARAGRAPH.LEFT
+        p_enc.paragraph_format.space_after = Pt(12)
         run_enc1 = p_enc.add_run('Gobierno del Chubut | Ministerio de Producción\n')
         run_enc1.bold = True
         run_enc1.font.name = 'Verdana'
         run_enc1.font.size = Pt(11)
+        run_enc1.font.color.rgb = RGBColor(26, 32, 44)
         
         run_enc2 = p_enc.add_run('Subsecretaría de Financiamiento y Comercio para la Producción\nDepartamento de Administración de Personal')
         run_enc2.font.name = 'Verdana'
@@ -76,6 +73,7 @@ def generar_documento_word(tipo_doc, lugar_fecha, dest_final, asunto_ref, cuerpo
         
         p_fecha = doc_obj.add_paragraph()
         p_fecha.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+        p_fecha.paragraph_format.space_after = Pt(12)
         run_fecha = p_fecha.add_run(lugar_fecha)
         run_fecha.bold = True
         run_fecha.font.name = 'Verdana'
@@ -83,14 +81,16 @@ def generar_documento_word(tipo_doc, lugar_fecha, dest_final, asunto_ref, cuerpo
         
         p_dest = doc_obj.add_paragraph()
         p_dest.alignment = WD_ALIGN_PARAGRAPH.LEFT
+        p_dest.paragraph_format.space_after = Pt(12)
+        p_dest.paragraph_format.line_spacing = 1.3
         run_dest = p_dest.add_run(dest_final)
         run_dest.font.name = 'Verdana'
         run_dest.font.size = Pt(11)
-        p_dest.paragraph_format.line_spacing = 1.3
         
         if asunto_ref:
             p_ref = doc_obj.add_paragraph()
             p_ref.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+            p_ref.paragraph_format.space_after = Pt(15)
             run_ref_b = p_ref.add_run('Ref.: ')
             run_ref_b.bold = True
             run_ref_b.font.name = 'Verdana'
@@ -101,6 +101,9 @@ def generar_documento_word(tipo_doc, lugar_fecha, dest_final, asunto_ref, cuerpo
             
         p_cuerpo = doc_obj.add_paragraph()
         p_cuerpo.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+        p_cuerpo.paragraph_format.line_spacing = 1.5
+        p_cuerpo.paragraph_format.space_after = Pt(25)
+        p_cuerpo.paragraph_format.first_line_indent = Inches(0.5)
         
         if tipo_doc == "Nota Oficial":
             texto_cuerpo = f"De mi mayor consideración:\n\n{cuerpo}\n\nSin otro particular, saludo a Ud. atentamente."
@@ -112,11 +115,11 @@ def generar_documento_word(tipo_doc, lugar_fecha, dest_final, asunto_ref, cuerpo
         run_cuerpo = p_cuerpo.add_run(texto_cuerpo)
         run_cuerpo.font.name = 'Verdana'
         run_cuerpo.font.size = Pt(11)
-        p_cuerpo.paragraph_format.line_spacing = 1.5
         
         p_pie = doc_obj.add_paragraph()
         p_pie.alignment = WD_ALIGN_PARAGRAPH.LEFT
-        run_pie = p_pie.add_run(f"\n{pie_formateado}")
+        p_pie.paragraph_format.space_after = Pt(30)
+        run_pie = p_pie.add_run(pie_formateado)
         run_pie.bold = True
         run_pie.font.name = 'Verdana'
         run_pie.font.size = Pt(10)
@@ -128,17 +131,19 @@ def generar_documento_word(tipo_doc, lugar_fecha, dest_final, asunto_ref, cuerpo
         run_cont.font.size = Pt(8)
         run_cont.font.color.rgb = RGBColor(128, 128, 128)
 
-    agregar_bloque(doc)
+    construir_bloque_oficial(doc)
     
     if es_duplicado:
         p_corte = doc.add_paragraph()
         p_corte.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        run_corte = p_corte.add_run("\n- - - - - - - - - - - - CORTAR AQUÍ (ORIGINAL Y DUPLICADO) - - - - - - - - - - - -\n")
+        p_corte.paragraph_format.space_before = Pt(15)
+        p_corte.paragraph_format.space_after = Pt(15)
+        run_corte = p_corte.add_run("- - - - - - - - - - - - CORTAR AQUÍ (ORIGINAL Y DUPLICADO) - - - - - - - - - - - -")
         run_corte.font.name = 'Verdana'
         run_corte.font.size = Pt(8)
         run_corte.font.color.rgb = RGBColor(160, 174, 192)
         
-        agregar_bloque(doc)
+        construir_bloque_oficial(doc)
         
     buffer = io.BytesIO()
     doc.save(buffer)
@@ -368,38 +373,50 @@ with pestana1:
             es_duplicado = False
 
         st.markdown("---")
-        st.subheader("📄 Vista Previa Texto")
+        st.subheader("📄 Vista Previa Estructurada")
         
-        # VISTA PREVIA LIMPIA NATIVA EN STREAMLIT
-        with st.container(border=True):
-            st.caption(leyenda_oficial)
-            st.markdown("**Gobierno del Chubut | Ministerio de Producción**")
-            st.text("Subsecretaría de Financiamiento y Comercio para la Producción\nDepartamento de Administración de Personal")
-            st.markdown(f"<div style='text-align: right;'><b>{lugar_fecha}</b></div>", unsafe_allow_html=True)
-            st.text(dest_final)
-            if asunto_ref:
-                st.markdown(f"<div style='text-align: right;'><b>Ref.:</b> {asunto_ref}</div>", unsafe_allow_html=True)
-            st.write(doc_cuerpo_completo)
-            if es_duplicado:
-                st.divider()
-                st.caption("✂️ (EN PASE ADMINISTRATIVO SE IMPRIME EL DUPLICADO ABAJO EN LA MISMA HOJA)")
-            st.caption(f"📍 {contacto_pie}")
+        def generar_html_visual():
+            ref_html = f'<div style="text-align: right; font-weight: bold; margin-bottom: 15px;">Ref.: {asunto_ref}</div>' if asunto_ref else ''
+            return f"""
+            <div style="font-family: Verdana, sans-serif; font-size: 11pt; color: #1a202c; line-height: 1.6; padding: 20px; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px;">
+                <div style="text-align: center; font-style: italic; font-weight: bold; font-size: 10pt; color: #2d3748; margin-bottom: 15px;">{leyenda_oficial}</div>
+                <div style="font-weight: bold; font-size: 11pt; color: #1a202c; margin-bottom: 3px;">Gobierno del Chubut | Ministerio de Producción</div>
+                <div style="font-size: 9pt; color: #4a5568; margin-bottom: 20px;">Subsecretaría de Financiamiento y Comercio para la Producción<br>Departamento de Administración de Personal</div>
+                <div style="text-align: right; font-weight: bold; margin-bottom: 15px;">{lugar_fecha}</div>
+                <div style="white-space: pre-line; margin-bottom: 20px;">{dest_final}</div>
+                {ref_html}
+                <div style="text-align: justify; white-space: pre-line; margin-bottom: 25px; text-indent: 30px;">{doc_cuerpo_completo}</div>
+                <div style="font-weight: bold; font-size: 10pt; margin-bottom: 25px;">{pie_formateado}</div>
+                <div style="text-align: center; font-size: 8pt; color: #718096; border-top: 1px solid #edf2f7; pt: 10px;">{contacto_pie}</div>
+            </div>
+            """
+
+        html_bloque = generar_html_visual()
+        
+        if es_duplicado:
+            html_final_vista = f"""
+            {html_bloque}
+            <div style="text-align: center; font-size: 9pt; color: #a0aec0; margin: 20px 0; font-weight: bold;">
+                - - - - - - - - - - - - CORTAR AQUÍ (ORIGINAL Y DUPLICADO) - - - - - - - - - - - -
+            </div>
+            {html_bloque}
+            """
+        else:
+            html_final_vista = html_bloque
+
+        st.markdown(html_final_vista, unsafe_allow_html=True)
 
         st.markdown("---")
-        col_btn1, col_btn2 = st.columns(2)
+        col_btn1, col_btn2, col_btn3 = st.columns(3)
         
-        if DOCX_DISPONIBLE:
-            file_word = generar_documento_word(tipo_doc, lugar_fecha, dest_final, asunto_ref, cuerpo, pie_formateado, es_duplicado)
-            with col_btn1:
-                st.download_button(
-                    label="📄 Descargar en Word (.docx) Editable",
-                    data=file_word,
-                    file_name=f"{tipo_doc.lower().replace(' ', '_')}_{siguiente_num}_{anio_actual}.docx",
-                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                )
-        else:
-            with col_btn1:
-                st.warning("Agregar 'python-docx' a requirements.txt para Word")
+        file_word = generar_documento_word(tipo_doc, lugar_fecha, dest_final, asunto_ref, cuerpo, pie_formateado, es_duplicado)
+        with col_btn1:
+            st.download_button(
+                label="📄 Descargar en Word (.docx) Editable",
+                data=file_word,
+                file_name=f"{tipo_doc.lower().replace(' ', '_')}_{siguiente_num}_{anio_actual}.docx",
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            )
 
         doc_texto_descarga = f"{lugar_fecha}\n\n{dest_final}\nRef.: {asunto_ref}\n\n{doc_cuerpo_completo}"
         with col_btn2:
@@ -409,6 +426,13 @@ with pestana1:
                 file_name=f"{tipo_doc.lower().replace(' ', '_')}_{siguiente_num}_{anio_actual}.txt",
                 mime="text/plain"
             )
+
+        with col_btn3:
+            st.markdown("""
+                <button onclick="window.print()" style="background-color: #2b6cb0; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold; width: 100%;">
+                    🖨️ Imprimir / Guardar en PDF
+                </button>
+            """, unsafe_allow_html=True)
 
 with pestana2:
     st.markdown("### 🔍 Buscador General de Documentos")

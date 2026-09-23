@@ -1,2 +1,2 @@
-streamlit>=1.30.0
-fpdf2>=2.7.5
+streamlit
+python-docx

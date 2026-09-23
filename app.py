@@ -4,7 +4,7 @@ import re
 import io
 from datetime import datetime
 
-# Intentar importar python-docx para generación de archivos Word
+# Importación para la generación de archivos Word
 try:
     import docx
     from docx import Document
@@ -14,7 +14,7 @@ try:
 except ImportError:
     DOCX_DISPONIBLE = False
 
-# Configuración de la página en modo ancho
+# Configuración de la página
 st.set_page_config(
     page_title="Redactor de Documentos Oficiales - Chubut",
     page_icon="📝",
@@ -22,7 +22,7 @@ st.set_page_config(
 )
 
 # ---------------------------------------------------------
-# FUNCIONES AUXILIARES Y LIMPIEZA
+# FUNCIONES DE FORMATO Y LIMPIEZA DE TEXTO
 # ---------------------------------------------------------
 MESES_ESPANOL = {
     1: "enero", 2: "febrero", 3: "marzo", 4: "abril",
@@ -38,18 +38,19 @@ def obtener_fecha_actual_espanol():
 def limpiar_texto(texto):
     if not texto:
         return ""
+    # Corrige múltiples saltos de línea vacíos y espacios dobles
     texto_limpio = re.sub(r'[ \t]+', ' ', texto)
+    texto_limpio = re.sub(r'\n\s*\n+', '\n', texto_limpio)
     return texto_limpio.strip()
 
 # ---------------------------------------------------------
-# GENERACIÓN DE ARCHIVO WORD (.DOCX)
+# GENERACIÓN DE ARCHIVO WORD (.DOCX) EDITABLE
 # ---------------------------------------------------------
 def generar_documento_word(tipo_doc, lugar_fecha, dest_final, asunto_ref, cuerpo, pie_formateado, es_duplicado):
     doc = Document()
     
-    # Configurar márgenes
-    sections = doc.sections
-    for section in sections:
+    # Configurar márgenes estándar
+    for section in doc.sections:
         section.top_margin = Inches(1)
         section.bottom_margin = Inches(1)
         section.left_margin = Inches(1)
@@ -80,7 +81,7 @@ def generar_documento_word(tipo_doc, lugar_fecha, dest_final, asunto_ref, cuerpo
         run_enc2.font.size = Pt(9)
         run_enc2.font.color.rgb = RGBColor(74, 85, 104)
         
-        # Fecha A la Derecha
+        # Fecha a la Derecha
         p_fecha = doc_obj.add_paragraph()
         p_fecha.alignment = WD_ALIGN_PARAGRAPH.RIGHT
         run_fecha = p_fecha.add_run(lugar_fecha)
@@ -88,7 +89,7 @@ def generar_documento_word(tipo_doc, lugar_fecha, dest_final, asunto_ref, cuerpo
         run_fecha.font.name = 'Verdana'
         run_fecha.font.size = Pt(11)
         
-        # Destinatario
+        # Destinatario corregido
         p_dest = doc_obj.add_paragraph()
         p_dest.alignment = WD_ALIGN_PARAGRAPH.LEFT
         run_dest = p_dest.add_run(dest_final)
@@ -108,7 +109,7 @@ def generar_documento_word(tipo_doc, lugar_fecha, dest_final, asunto_ref, cuerpo
             run_ref_t.font.name = 'Verdana'
             run_ref_t.font.size = Pt(11)
             
-        # Cuerpo
+        # Cuerpo del Documento
         p_cuerpo = doc_obj.add_paragraph()
         p_cuerpo.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
         
@@ -124,7 +125,7 @@ def generar_documento_word(tipo_doc, lugar_fecha, dest_final, asunto_ref, cuerpo
         run_cuerpo.font.size = Pt(11)
         p_cuerpo.paragraph_format.line_spacing = 1.5
         
-        # Pie / Firma
+        # Pie con Iniciales
         p_pie = doc_obj.add_paragraph()
         p_pie.alignment = WD_ALIGN_PARAGRAPH.LEFT
         run_pie = p_pie.add_run(f"\n{pie_formateado}")
@@ -158,7 +159,7 @@ def generar_documento_word(tipo_doc, lugar_fecha, dest_final, asunto_ref, cuerpo
     return buffer
 
 # ---------------------------------------------------------
-# BASE DE DATOS LOCAL
+# BASE DE DATOS LOCAL Y AUTOCOMPLETADO
 # ---------------------------------------------------------
 def init_db():
     conn = sqlite3.connect("documentos.db")
@@ -185,7 +186,7 @@ def init_db():
     
     frecuentes = [
         "Departamento Sueldos",
-        "Mesa General de Entradas y Salidas - Ministerio de Producción",
+        "Mesa General de Entradas y Salidas\nMinisterio de Producción\nSU DESPACHO",
         "Ministerio de Producción\nDirección General de Asuntos Legales\nAbg. Norma Navarro\nSU DESPACHO:",
         "División Sueldos y Cargas Sociales",
         "Subsecretaría de Financiamiento y Comercio para la Producción"
@@ -258,7 +259,7 @@ def buscar_documentos(query=""):
 init_db()
 
 # ---------------------------------------------------------
-# INTERFAZ PRINCIPAL
+# INTERFAZ PRINCIPAL DE LA APP
 # ---------------------------------------------------------
 st.title("📝 Redactor de Documentos Oficiales")
 st.subheader("Gobierno de la Provincia del Chubut - Ministerio de Producción")
@@ -294,13 +295,13 @@ with pestana1:
         destinatario_seleccionado = st.selectbox("Seleccionar un destinatario habitual:", opciones_destinatarios)
         
         if destinatario_seleccionado == "-- Escribir un nuevo destinatario --":
-            destinatario_input = st.text_input("Ingresa Destinatario o Área de Destino:", value="")
+            destinatario_input = st.text_area("Ingresa Destinatario o Área de Destino:", value="Ministerio de Producción\nDirección General de Asuntos Legales\nAbg. Norma Navarro\nSU DESPACHO:")
         else:
             destinatario_input = destinatario_seleccionado
 
         destinatario_input = limpiar_texto(destinatario_input)
         
-        # Sugerencia y verificación normativa
+        # Evaluación normativa del documento según destino
         sugerencia = "Nota Oficial"
         explicacion = "Las comunicaciones dirigidas a Asuntos Legales u otros Ministerios/Direcciones externas deben canalizarse como Nota Oficial."
         
@@ -352,7 +353,7 @@ with pestana1:
                 asunto_ref = st.text_input("Ref. / Expte. a acumular:", value="Acumulación de Expediente N° 3091/2023...")
                 cuerpo = st.text_area("Cuerpo del Pase:", height=180, value="Por medio del presente me dirijo a usted, con el fin de solicitar acumular Expediente Nº 3091/2023 – MAGIyC – constan 14 fojas, al Expediente 1612/2024 el mismo consta con 30 fojas cuyo extracto exprese lo siguiente:\n\nS/ Recaratular Expte. N°3498/2023 UEP.MAGYC-Ref. Pase N° 471/2023 SAP-UEP-MAGIyC “Baja por fallecimiento del agente OLATE, Juan Carlos”.\n\nUna vez cumplido vuelva a este Departamento de Personal, para proseguir con el trámite administrativo correspondiente.")
             else: # Nota Oficial
-                dest_final = destinatario_input if destinatario_input else "Ministerio de Producción\nDirección General de Asuntos Legales\nAbg. Norma Navarro\nSU DESPACHO:"
+                dest_final = destinatario_input
                 st.text_area("Destinatario completo:", value=dest_final)
                 asunto_ref = st.text_input("Ref. / Expte.:")
                 cuerpo = st.text_area("Cuerpo de la Nota:", height=180)
@@ -424,7 +425,7 @@ with pestana1:
             """
         else:
             html_imprimir = f"""
-            <div id="documento-imprimir" style="font-family: Verdana, Geneva, sans-serif; padding: 25px; border: 1px solid #ccc; background-color: #fff; line-height: 1.5;">
+            <div id="documento-imprimir" style="font-family: Verdana, Geneva, sans-serif; padding: 20px; border: 1px solid #ccc; background-color: #fff; line-height: 1.5;">
                 {bloque_unico}
             </div>
             """
@@ -448,7 +449,7 @@ with pestana1:
             with col_btn1:
                 st.warning("Para activar descarga Word agregue 'python-docx' a requirements.txt")
 
-        # Botón 2: Descargar Texto Plano (.txt)
+        # Botón 2: Descargar Texto (.txt)
         doc_texto_descarga = f"{lugar_fecha}\n\n{doc_encabezado_texto}\nRef.: {asunto_ref}\n\n{doc_cuerpo_completo}"
         with col_btn2:
             st.download_button(

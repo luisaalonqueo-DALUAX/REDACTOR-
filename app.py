@@ -1,7 +1,18 @@
 import streamlit as st
 import sqlite3
 import re
+import io
 from datetime import datetime
+
+# Intentar importar python-docx para generación de archivos Word
+try:
+    import docx
+    from docx import Document
+    from docx.shared import Pt, Inches, RGBColor
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    DOCX_DISPONIBLE = True
+except ImportError:
+    DOCX_DISPONIBLE = False
 
 # Configuración de la página en modo ancho
 st.set_page_config(
@@ -27,12 +38,127 @@ def obtener_fecha_actual_espanol():
 def limpiar_texto(texto):
     if not texto:
         return ""
-    # Quita espacios dobles o múltiples redundantes
     texto_limpio = re.sub(r'[ \t]+', ' ', texto)
     return texto_limpio.strip()
 
 # ---------------------------------------------------------
-# BASE DE DATOS LOCAL Y AUTOCOMPLETADO DE DESTINATARIOS
+# GENERACIÓN DE ARCHIVO WORD (.DOCX)
+# ---------------------------------------------------------
+def generar_documento_word(tipo_doc, lugar_fecha, dest_final, asunto_ref, cuerpo, pie_formateado, es_duplicado):
+    doc = Document()
+    
+    # Configurar márgenes
+    sections = doc.sections
+    for section in sections:
+        section.top_margin = Inches(1)
+        section.bottom_margin = Inches(1)
+        section.left_margin = Inches(1)
+        section.right_margin = Inches(1)
+        
+    def agregar_bloque(doc_obj):
+        # Leyenda Oficial Centrada
+        p_leyenda = doc_obj.add_paragraph()
+        p_leyenda.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        run_ley = p_leyenda.add_run('“Año de la Innovación y Modernización del Estado de la Provincia del Chubut”')
+        run_ley.italic = True
+        run_ley.font.name = 'Verdana'
+        run_ley.font.size = Pt(9.5)
+        run_ley.font.bold = True
+        run_ley.font.color.rgb = RGBColor(45, 55, 72)
+        
+        # Encabezado Membrete
+        p_enc = doc_obj.add_paragraph()
+        p_enc.alignment = WD_ALIGN_PARAGRAPH.LEFT
+        run_enc1 = p_enc.add_run('Gobierno del Chubut | Ministerio de Producción\n')
+        run_enc1.bold = True
+        run_enc1.font.name = 'Verdana'
+        run_enc1.font.size = Pt(11)
+        run_enc1.font.color.rgb = RGBColor(26, 32, 44)
+        
+        run_enc2 = p_enc.add_run('Subsecretaría de Financiamiento y Comercio para la Producción\nDepartamento de Administración de Personal')
+        run_enc2.font.name = 'Verdana'
+        run_enc2.font.size = Pt(9)
+        run_enc2.font.color.rgb = RGBColor(74, 85, 104)
+        
+        # Fecha A la Derecha
+        p_fecha = doc_obj.add_paragraph()
+        p_fecha.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+        run_fecha = p_fecha.add_run(lugar_fecha)
+        run_fecha.bold = True
+        run_fecha.font.name = 'Verdana'
+        run_fecha.font.size = Pt(11)
+        
+        # Destinatario
+        p_dest = doc_obj.add_paragraph()
+        p_dest.alignment = WD_ALIGN_PARAGRAPH.LEFT
+        run_dest = p_dest.add_run(dest_final)
+        run_dest.font.name = 'Verdana'
+        run_dest.font.size = Pt(11)
+        p_dest.paragraph_format.line_spacing = 1.3
+        
+        # Referencia
+        if asunto_ref:
+            p_ref = doc_obj.add_paragraph()
+            p_ref.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+            run_ref_b = p_ref.add_run('Ref.: ')
+            run_ref_b.bold = True
+            run_ref_b.font.name = 'Verdana'
+            run_ref_b.font.size = Pt(11)
+            run_ref_t = p_ref.add_run(asunto_ref)
+            run_ref_t.font.name = 'Verdana'
+            run_ref_t.font.size = Pt(11)
+            
+        # Cuerpo
+        p_cuerpo = doc_obj.add_paragraph()
+        p_cuerpo.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+        
+        if tipo_doc == "Nota Oficial":
+            texto_cuerpo = f"De mi mayor consideración:\n\n{cuerpo}\n\nSin otro particular, saludo a Ud. atentamente."
+        elif tipo_doc == "Memorándum":
+            texto_cuerpo = f"{cuerpo}\n\nSin más que agregar, saludo a usted muy atentamente."
+        else:
+            texto_cuerpo = cuerpo
+
+        run_cuerpo = p_cuerpo.add_run(texto_cuerpo)
+        run_cuerpo.font.name = 'Verdana'
+        run_cuerpo.font.size = Pt(11)
+        p_cuerpo.paragraph_format.line_spacing = 1.5
+        
+        # Pie / Firma
+        p_pie = doc_obj.add_paragraph()
+        p_pie.alignment = WD_ALIGN_PARAGRAPH.LEFT
+        run_pie = p_pie.add_run(f"\n{pie_formateado}")
+        run_pie.bold = True
+        run_pie.font.name = 'Verdana'
+        run_pie.font.size = Pt(10)
+        
+        # Dirección Institucional
+        p_cont = doc_obj.add_paragraph()
+        p_cont.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        run_cont = p_cont.add_run("Mariano Moreno y Luis Costa | Rawson | Chubut (Teléfono 280-4485125/126)")
+        run_cont.font.name = 'Verdana'
+        run_cont.font.size = Pt(8)
+        run_cont.font.color.rgb = RGBColor(128, 128, 128)
+
+    agregar_bloque(doc)
+    
+    if es_duplicado:
+        p_corte = doc.add_paragraph()
+        p_corte.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        run_corte = p_corte.add_run("\n- - - - - - - - - - - - CORTAR AQUÍ (ORIGINAL Y DUPLICADO) - - - - - - - - - - - -\n")
+        run_corte.font.name = 'Verdana'
+        run_corte.font.size = Pt(8)
+        run_corte.font.color.rgb = RGBColor(160, 174, 192)
+        
+        agregar_bloque(doc)
+        
+    buffer = io.BytesIO()
+    doc.save(buffer)
+    buffer.seek(0)
+    return buffer
+
+# ---------------------------------------------------------
+# BASE DE DATOS LOCAL
 # ---------------------------------------------------------
 def init_db():
     conn = sqlite3.connect("documentos.db")
@@ -305,23 +431,38 @@ with pestana1:
         
         st.markdown(html_imprimir, unsafe_allow_html=True)
         
-        doc_texto_descarga = f"{lugar_fecha}\n\n{doc_encabezado_texto}\nRef.: {asunto_ref}\n\n{doc_cuerpo_completo}"
-        if es_duplicado:
-            doc_texto_descarga += f"\n\n==================== DUPLICADO ====================\n\n{lugar_fecha}\n\n{doc_encabezado_texto}\nRef.: {asunto_ref}\n\n{doc_cuerpo_completo}"
-
         st.markdown("---")
-        col_btn1, col_btn2 = st.columns(2)
-        with col_btn1:
+        col_btn1, col_btn2, col_btn3 = st.columns(3)
+        
+        # Botón 1: Descargar Word editable (.docx)
+        if DOCX_DISPONIBLE:
+            file_word = generar_documento_word(tipo_doc, lugar_fecha, dest_final, asunto_ref, cuerpo, pie_formateado, es_duplicado)
+            with col_btn1:
+                st.download_button(
+                    label="📄 Descargar en Word (.docx) Editable",
+                    data=file_word,
+                    file_name=f"{tipo_doc.lower().replace(' ', '_')}_{siguiente_num}_{anio_actual}.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                )
+        else:
+            with col_btn1:
+                st.warning("Para activar descarga Word agregue 'python-docx' a requirements.txt")
+
+        # Botón 2: Descargar Texto Plano (.txt)
+        doc_texto_descarga = f"{lugar_fecha}\n\n{doc_encabezado_texto}\nRef.: {asunto_ref}\n\n{doc_cuerpo_completo}"
+        with col_btn2:
             st.download_button(
-                label="📥 Descargar Documento (.txt)",
+                label="📥 Descargar Texto (.txt)",
                 data=doc_texto_descarga,
                 file_name=f"{tipo_doc.lower().replace(' ', '_')}_{siguiente_num}_{anio_actual}.txt",
                 mime="text/plain"
             )
-        with col_btn2:
+
+        # Botón 3: Imprimir directamente o Guardar en PDF
+        with col_btn3:
             st.markdown("""
                 <button onclick="window.print()" style="background-color: #2b6cb0; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold; width: 100%;">
-                    🖨️ Imprimir o Guardar como PDF
+                    🖨️ Imprimir / Guardar en PDF
                 </button>
             """, unsafe_allow_html=True)
 

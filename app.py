@@ -4,7 +4,7 @@ import re
 import io
 from datetime import datetime
 
-# Importación para la generación de archivos Word
+# Intentar cargar la librería para Word
 try:
     import docx
     from docx import Document
@@ -14,7 +14,6 @@ try:
 except ImportError:
     DOCX_DISPONIBLE = False
 
-# Configuración de la página
 st.set_page_config(
     page_title="Redactor de Documentos Oficiales - Chubut",
     page_icon="📝",
@@ -22,7 +21,7 @@ st.set_page_config(
 )
 
 # ---------------------------------------------------------
-# FUNCIONES DE FORMATO Y LIMPIEZA DE TEXTO
+# FUNCIONES DE FORMATO Y LIMPIEZA
 # ---------------------------------------------------------
 MESES_ESPANOL = {
     1: "enero", 2: "febrero", 3: "marzo", 4: "abril",
@@ -38,9 +37,7 @@ def obtener_fecha_actual_espanol():
 def limpiar_texto(texto):
     if not texto:
         return ""
-    # Corrige múltiples saltos de línea vacíos y espacios dobles
     texto_limpio = re.sub(r'[ \t]+', ' ', texto)
-    texto_limpio = re.sub(r'\n\s*\n+', '\n', texto_limpio)
     return texto_limpio.strip()
 
 # ---------------------------------------------------------
@@ -49,7 +46,6 @@ def limpiar_texto(texto):
 def generar_documento_word(tipo_doc, lugar_fecha, dest_final, asunto_ref, cuerpo, pie_formateado, es_duplicado):
     doc = Document()
     
-    # Configurar márgenes estándar
     for section in doc.sections:
         section.top_margin = Inches(1)
         section.bottom_margin = Inches(1)
@@ -57,7 +53,6 @@ def generar_documento_word(tipo_doc, lugar_fecha, dest_final, asunto_ref, cuerpo
         section.right_margin = Inches(1)
         
     def agregar_bloque(doc_obj):
-        # Leyenda Oficial Centrada
         p_leyenda = doc_obj.add_paragraph()
         p_leyenda.alignment = WD_ALIGN_PARAGRAPH.CENTER
         run_ley = p_leyenda.add_run('“Año de la Innovación y Modernización del Estado de la Provincia del Chubut”')
@@ -67,21 +62,18 @@ def generar_documento_word(tipo_doc, lugar_fecha, dest_final, asunto_ref, cuerpo
         run_ley.font.bold = True
         run_ley.font.color.rgb = RGBColor(45, 55, 72)
         
-        # Encabezado Membrete
         p_enc = doc_obj.add_paragraph()
         p_enc.alignment = WD_ALIGN_PARAGRAPH.LEFT
         run_enc1 = p_enc.add_run('Gobierno del Chubut | Ministerio de Producción\n')
         run_enc1.bold = True
         run_enc1.font.name = 'Verdana'
         run_enc1.font.size = Pt(11)
-        run_enc1.font.color.rgb = RGBColor(26, 32, 44)
         
         run_enc2 = p_enc.add_run('Subsecretaría de Financiamiento y Comercio para la Producción\nDepartamento de Administración de Personal')
         run_enc2.font.name = 'Verdana'
         run_enc2.font.size = Pt(9)
         run_enc2.font.color.rgb = RGBColor(74, 85, 104)
         
-        # Fecha a la Derecha
         p_fecha = doc_obj.add_paragraph()
         p_fecha.alignment = WD_ALIGN_PARAGRAPH.RIGHT
         run_fecha = p_fecha.add_run(lugar_fecha)
@@ -89,7 +81,6 @@ def generar_documento_word(tipo_doc, lugar_fecha, dest_final, asunto_ref, cuerpo
         run_fecha.font.name = 'Verdana'
         run_fecha.font.size = Pt(11)
         
-        # Destinatario corregido
         p_dest = doc_obj.add_paragraph()
         p_dest.alignment = WD_ALIGN_PARAGRAPH.LEFT
         run_dest = p_dest.add_run(dest_final)
@@ -97,7 +88,6 @@ def generar_documento_word(tipo_doc, lugar_fecha, dest_final, asunto_ref, cuerpo
         run_dest.font.size = Pt(11)
         p_dest.paragraph_format.line_spacing = 1.3
         
-        # Referencia
         if asunto_ref:
             p_ref = doc_obj.add_paragraph()
             p_ref.alignment = WD_ALIGN_PARAGRAPH.RIGHT
@@ -109,7 +99,6 @@ def generar_documento_word(tipo_doc, lugar_fecha, dest_final, asunto_ref, cuerpo
             run_ref_t.font.name = 'Verdana'
             run_ref_t.font.size = Pt(11)
             
-        # Cuerpo del Documento
         p_cuerpo = doc_obj.add_paragraph()
         p_cuerpo.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
         
@@ -125,7 +114,6 @@ def generar_documento_word(tipo_doc, lugar_fecha, dest_final, asunto_ref, cuerpo
         run_cuerpo.font.size = Pt(11)
         p_cuerpo.paragraph_format.line_spacing = 1.5
         
-        # Pie con Iniciales
         p_pie = doc_obj.add_paragraph()
         p_pie.alignment = WD_ALIGN_PARAGRAPH.LEFT
         run_pie = p_pie.add_run(f"\n{pie_formateado}")
@@ -133,7 +121,6 @@ def generar_documento_word(tipo_doc, lugar_fecha, dest_final, asunto_ref, cuerpo
         run_pie.font.name = 'Verdana'
         run_pie.font.size = Pt(10)
         
-        # Dirección Institucional
         p_cont = doc_obj.add_paragraph()
         p_cont.alignment = WD_ALIGN_PARAGRAPH.CENTER
         run_cont = p_cont.add_run("Mariano Moreno y Luis Costa | Rawson | Chubut (Teléfono 280-4485125/126)")
@@ -159,7 +146,7 @@ def generar_documento_word(tipo_doc, lugar_fecha, dest_final, asunto_ref, cuerpo
     return buffer
 
 # ---------------------------------------------------------
-# BASE DE DATOS LOCAL Y AUTOCOMPLETADO
+# BASE DE DATOS LOCAL
 # ---------------------------------------------------------
 def init_db():
     conn = sqlite3.connect("documentos.db")
@@ -259,7 +246,7 @@ def buscar_documentos(query=""):
 init_db()
 
 # ---------------------------------------------------------
-# INTERFAZ PRINCIPAL DE LA APP
+# INTERFAZ
 # ---------------------------------------------------------
 st.title("📝 Redactor de Documentos Oficiales")
 st.subheader("Gobierno de la Provincia del Chubut - Ministerio de Producción")
@@ -271,7 +258,7 @@ with pestana1:
     
     with col_indice:
         st.markdown("### 📋 Índice de Correlatividad")
-        st.caption("Historial de números utilizados y motivo de emisión")
+        st.caption("Historial de números utilizados")
         
         docs_registrados = obtener_todos_documentos()
         
@@ -284,37 +271,36 @@ with pestana1:
                 st.markdown(f"• **Destino:** {d_dest[:40]}...")
                 st.markdown("---")
         else:
-            st.info("Aún no hay documentos registrados en el índice.")
+            st.info("Aún no hay documentos registrados.")
 
     with col_redaccion:
         anio_actual = str(datetime.now().year)
         
-        st.markdown("### 1. Verificación de Destino (Autocompletado)")
+        st.markdown("### 1. Destinatario")
         
         opciones_destinatarios = ["-- Escribir un nuevo destinatario --"] + obtener_destinatarios_frecuentes()
         destinatario_seleccionado = st.selectbox("Seleccionar un destinatario habitual:", opciones_destinatarios)
         
         if destinatario_seleccionado == "-- Escribir un nuevo destinatario --":
-            destinatario_input = st.text_area("Ingresa Destinatario o Área de Destino:", value="Ministerio de Producción\nDirección General de Asuntos Legales\nAbg. Norma Navarro\nSU DESPACHO:")
+            destinatario_input = st.text_area("Ingresa Destinatario:", value="Dirección General de Asuntos Legales\nAbg. Norma Navarro\nSU DESPACHO:")
         else:
             destinatario_input = destinatario_seleccionado
 
         destinatario_input = limpiar_texto(destinatario_input)
         
-        # Evaluación normativa del documento según destino
         sugerencia = "Nota Oficial"
-        explicacion = "Las comunicaciones dirigidas a Asuntos Legales u otros Ministerios/Direcciones externas deben canalizarse como Nota Oficial."
+        explicacion = "Las comunicaciones dirigidas a Asuntos Legales u otros Ministerios/Direcciones externas corresponden a Nota Oficial."
         
         dest_lower = destinatario_input.lower()
         if any(p in dest_lower for p in ["sueldos", "división", "departamento sueldos", "liquidacion", "costos"]):
             sugerencia = "Memorándum"
-            explicacion = "Las comunicaciones internas dirigidas a dependencias como el Departamento Sueldos se tramitan como Memorándum."
+            explicacion = "Las comunicaciones internas a dependencias propias corresponden a Memorándum."
         elif any(p in dest_lower for p in ["mesa", "entradas", "acumular", "salidas"]):
             sugerencia = "Pase Administrativo"
-            explicacion = "Los giros de actuaciones a Mesa de Entradas o pedidos de acumulación de expedientes corresponden a un Pase Administrativo (se imprime por duplicado)."
+            explicacion = "El giro o acumulación de expedientes corresponde a Pase Administrativo."
         
         if destinatario_input:
-            st.info(f"💡 **Verificación Normativa:** Según el destino ingresado, corresponde un/a **{sugerencia}**.\n\n_{explicacion}_")
+            st.info(f"💡 **Sugerencia Normativa:** Según el destino, corresponde un/a **{sugerencia}**.\n_{explicacion}_")
 
         tipo_doc = st.selectbox(
             "Tipo de Documento a emitir:",
@@ -325,7 +311,7 @@ with pestana1:
         ultimo_num = obtener_ultimo_numero(tipo_doc, anio_actual)
         siguiente_num = ultimo_num + 1
 
-        st.warning(f"📌 Último número emitido para **{tipo_doc}** en {anio_actual}: **{ultimo_num}**. Próximo número disponible: **{siguiente_num}**.")
+        st.warning(f"📌 Próximo número disponible para **{tipo_doc}**: **{siguiente_num}**.")
 
         with st.form("form_redaccion"):
             c1, c2 = st.columns(2)
@@ -333,23 +319,20 @@ with pestana1:
                 num_doc = st.number_input("Número Correlativo:", value=siguiente_num, step=1)
                 anio_doc = st.text_input("Año:", value=anio_actual)
             with c2:
-                lugar_fecha = st.text_input("Lugar y Fecha (A la derecha):", value=obtener_fecha_actual_espanol())
+                lugar_fecha = st.text_input("Lugar y Fecha:", value=obtener_fecha_actual_espanol())
                 iniciales = st.text_input("Iniciales al pie:", value="L.I.A.")
 
             st.markdown("---")
             
             if tipo_doc == "Memorándum":
                 de_persona = st.text_input("Producido por:", value="Departamento de Administración de Personal")
-                para_persona = st.text_input("Para Información:", value=destinatario_input if destinatario_input else "Departamento Sueldos")
+                para_persona = st.text_input("Para Información:", value="Departamento Sueldos")
                 asunto_ref = st.text_input("Ref. / Expte.:", value="Expte: N° 1729/2026-MP- Reclamo Adicional...")
                 cuerpo = st.text_area("Cuerpo del Memorándum:", height=180)
-                
-                de_persona = limpiar_texto(de_persona)
-                para_persona = limpiar_texto(para_persona)
-                dest_final = f"Producido por: {de_persona}\nPara Información: {para_persona}"
+                dest_final = f"Producido por: {limpiar_texto(de_persona)}\nPara Información: {limpiar_texto(para_persona)}"
             elif tipo_doc == "Pase Administrativo":
                 dest_final = destinatario_input if destinatario_input else "Mesa General de Entradas y Salidas\nMinisterio de Producción\nSU DESPACHO"
-                st.text_area("Destinatario / Repartición:", value=dest_final)
+                st.text_area("Destinatario:", value=dest_final)
                 asunto_ref = st.text_input("Ref. / Expte. a acumular:", value="Acumulación de Expediente N° 3091/2023...")
                 cuerpo = st.text_area("Cuerpo del Pase:", height=180, value="Por medio del presente me dirijo a usted, con el fin de solicitar acumular Expediente Nº 3091/2023 – MAGIyC – constan 14 fojas, al Expediente 1612/2024 el mismo consta con 30 fojas cuyo extracto exprese lo siguiente:\n\nS/ Recaratular Expte. N°3498/2023 UEP.MAGYC-Ref. Pase N° 471/2023 SAP-UEP-MAGIyC “Baja por fallecimiento del agente OLATE, Juan Carlos”.\n\nUna vez cumplido vuelva a este Departamento de Personal, para proseguir con el trámite administrativo correspondiente.")
             else: # Nota Oficial
@@ -365,7 +348,7 @@ with pestana1:
 
         if submitted:
             guardar_documento(tipo_doc, num_doc, anio_doc, lugar_fecha, dest_final, asunto_ref, cuerpo, iniciales)
-            st.success(f"✅ Registrado en el índice general: **{tipo_doc} N° {num_doc}/{anio_doc}**.")
+            st.success(f"✅ Registrado: **{tipo_doc} N° {num_doc}/{anio_doc}**.")
             st.rerun()
 
         leyenda_oficial = "“Año de la Innovación y Modernización del Estado de la Provincia del Chubut”"
@@ -373,69 +356,38 @@ with pestana1:
         
         if tipo_doc == "Memorándum":
             pie_formateado = f"Memo Nº {siguiente_num}/{anio_actual} –DAP- SsFyCP-MP ({iniciales})"
-            doc_encabezado_texto = f"{dest_final}"
-            doc_cuerpo_completo = f"{cuerpo}\n\nSin más que agregar, saludo a usted muy atentamente.\n\n\n{pie_formateado}"
+            doc_cuerpo_completo = f"{cuerpo}\n\nSin más que agregar, saludo a usted muy atentamente.\n\n{pie_formateado}"
             es_duplicado = False
         elif tipo_doc == "Pase Administrativo":
             pie_formateado = f"Pase N° {siguiente_num}/{anio_actual}-dap-SsFyCP-MP({iniciales})"
-            doc_encabezado_texto = f"{dest_final}"
-            doc_cuerpo_completo = f"{cuerpo}\n\n\n{pie_formateado}"
+            doc_cuerpo_completo = f"{cuerpo}\n\n{pie_formateado}"
             es_duplicado = True
         else: # Nota Oficial
             pie_formateado = f"Nota N° {siguiente_num}/{anio_actual} DAP-SsFyCP- Ministerio de Producción ({iniciales})"
-            doc_encabezado_texto = f"{dest_final}"
-            doc_cuerpo_completo = f"De mi mayor consideración:\n\n{cuerpo}\n\nSin otro particular, saludo a Ud. atentamente.\n\n\n({iniciales}) {pie_formateado}"
+            doc_cuerpo_completo = f"De mi mayor consideración:\n\n{cuerpo}\n\nSin otro particular, saludo a Ud. atentamente.\n\n({iniciales}) {pie_formateado}"
             es_duplicado = False
 
         st.markdown("---")
-        st.subheader("📄 Vista Previa e Impresión del Documento")
+        st.subheader("📄 Vista Previa Texto")
         
-        def generar_html_bloque():
-            ref_div = f'<div style="text-align: right; font-size: 11pt; margin-bottom: 15px;"><strong>Ref.:</strong> {asunto_ref}</div>' if asunto_ref else ''
-            return f"""
-            <div style="text-align: center; margin-bottom: 10px;">
-                <span style="font-style: italic; font-size: 10pt; font-weight: bold; color: #2d3748;">{leyenda_oficial}</span>
-            </div>
-            <div style="border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 15px; display: flex; align-items: center; gap: 12px;">
-                <div style="text-align: left; border-right: 3px solid #ed8936; padding-right: 12px;">
-                    <strong style="font-size: 13pt; color: #1a202c; display: block; line-height: 1.1;">Gobierno<br>del Chubut</strong>
-                </div>
-                <div style="text-align: left; padding-left: 2px;">
-                    <strong style="font-size: 13pt; color: #1a202c; display: block; line-height: 1.1;">Ministerio de<br>Producción</strong>
-                </div>
-            </div>
-            <div style="text-align: right; font-weight: bold; font-size: 11pt; margin-bottom: 15px;">{lugar_fecha}</div>
-            <div style="font-size: 11pt; margin-bottom: 15px; white-space: pre-line;">{doc_encabezado_texto}</div>
-            {ref_div}
-            <div style="font-size: 11pt; line-height: 1.5; margin-bottom: 25px; white-space: pre-line; text-align: justify;">{doc_cuerpo_completo}</div>
-            <div style="font-size: 8pt; color: gray; text-align: center; margin-top: 25px; border-top: 1px solid #eee; padding-top: 5px;">{contacto_pie}</div>
-            """
+        # VISTA PREVIA LIMPIA NATIVA EN STREAMLIT (SIN CÓDIGO NI HTML)
+        with st.container(border=True):
+            st.caption(leyenda_oficial)
+            st.bold("Gobierno del Chubut | Ministerio de Producción")
+            st.text("Subsecretaría de Financiamiento y Comercio para la Producción\nDepartamento de Administración de Personal")
+            st.markdown(f"<div style='text-align: right;'><b>{lugar_fecha}</b></div>", unsafe_allow_html=True)
+            st.text(dest_final)
+            if asunto_ref:
+                st.markdown(f"<div style='text-align: right;'><b>Ref.:</b> {asunto_ref}</div>", unsafe_allow_html=True)
+            st.write(doc_cuerpo_completo)
+            if es_duplicado:
+                st.divider()
+                st.caption("✂️ (EN PASE ADMINISTRATIVO SE IMPRIME EL DUPLICADO ABAJO EN LA MISMA HOJA)")
+            st.caption(f"📍 {contacto_pie}")
 
-        bloque_unico = generar_html_bloque()
-        
-        if es_duplicado:
-            html_imprimir = f"""
-            <div id="documento-imprimir" style="font-family: Verdana, Geneva, sans-serif; padding: 20px; border: 1px solid #ccc; background-color: #fff; line-height: 1.5;">
-                {bloque_unico}
-                <div style="border-top: 2px dashed #a0aec0; margin: 30px 0; text-align: center; font-size: 9pt; color: #718096; padding-top: 5px;">
-                    ✂️ ORIGINAL Y DUPLICADO EN LA MISMA HOJA
-                </div>
-                {bloque_unico}
-            </div>
-            """
-        else:
-            html_imprimir = f"""
-            <div id="documento-imprimir" style="font-family: Verdana, Geneva, sans-serif; padding: 20px; border: 1px solid #ccc; background-color: #fff; line-height: 1.5;">
-                {bloque_unico}
-            </div>
-            """
-        
-        st.markdown(html_imprimir, unsafe_allow_html=True)
-        
         st.markdown("---")
-        col_btn1, col_btn2, col_btn3 = st.columns(3)
+        col_btn1, col_btn2 = st.columns(2)
         
-        # Botón 1: Descargar Word editable (.docx)
         if DOCX_DISPONIBLE:
             file_word = generar_documento_word(tipo_doc, lugar_fecha, dest_final, asunto_ref, cuerpo, pie_formateado, es_duplicado)
             with col_btn1:
@@ -447,10 +399,9 @@ with pestana1:
                 )
         else:
             with col_btn1:
-                st.warning("Para activar descarga Word agregue 'python-docx' a requirements.txt")
+                st.warning("Agregar 'python-docx' a requirements.txt para Word")
 
-        # Botón 2: Descargar Texto (.txt)
-        doc_texto_descarga = f"{lugar_fecha}\n\n{doc_encabezado_texto}\nRef.: {asunto_ref}\n\n{doc_cuerpo_completo}"
+        doc_texto_descarga = f"{lugar_fecha}\n\n{dest_final}\nRef.: {asunto_ref}\n\n{doc_cuerpo_completo}"
         with col_btn2:
             st.download_button(
                 label="📥 Descargar Texto (.txt)",
@@ -458,14 +409,6 @@ with pestana1:
                 file_name=f"{tipo_doc.lower().replace(' ', '_')}_{siguiente_num}_{anio_actual}.txt",
                 mime="text/plain"
             )
-
-        # Botón 3: Imprimir directamente o Guardar en PDF
-        with col_btn3:
-            st.markdown("""
-                <button onclick="window.print()" style="background-color: #2b6cb0; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold; width: 100%;">
-                    🖨️ Imprimir / Guardar en PDF
-                </button>
-            """, unsafe_allow_html=True)
 
 with pestana2:
     st.markdown("### 🔍 Buscador General de Documentos")

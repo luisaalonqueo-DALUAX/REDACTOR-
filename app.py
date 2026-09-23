@@ -370,7 +370,7 @@ with pestana1:
         st.markdown("---")
         st.subheader("📄 Vista Previa Texto")
         
-        # VISTA PREVIA CORREGIDA CON st.markdown
+        # VISTA PREVIA LIMPIA NATIVA EN STREAMLIT
         with st.container(border=True):
             st.caption(leyenda_oficial)
             st.markdown("**Gobierno del Chubut | Ministerio de Producción**")
